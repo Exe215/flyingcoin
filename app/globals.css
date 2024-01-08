@@ -1,27 +1,89 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+.fade-in {
+    animation: fadeIn 500ms ease-out;
 }
+
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+    background: linear-gradient(to right, #0f0f0f, #080408); /* Creates a horizontal gradient */
+    color: white; /* Sets text color to white for better readability */
+    margin: 0; /* Removes default margin */
+    padding: 0; /* Removes default padding */
+    height: 100vh; /* Ensures the background covers the whole viewport height */
+    text-align: center;
 }
+
+
+
+.container {
+    display: flex;
+    flex-wrap: wrap; /* Allows cards to wrap to the next line */
+    justify-content: center; /* Centers cards horizontally */
+    align-items: flex-start; /* Aligns cards to the top */
+    height: 100vh;
+    padding: 20px; /* Adds some space around the container */
+}
+
+.card {
+    padding: 15px;
+    border-style: solid;
+    border-color: #ffffff;
+    max-width: 300px; /* Adjust the width as needed */
+    margin: 10px; /* Adds margin around each card */
+    text-align: center;
+    padding-bottom: 50px;
+    flex-basis: 300px; /* Initial base size of the cards */
+    flex-grow: 1; /* Allows cards to grow and fill the space */
+}
+
+.card_button{
+    font-size:10px;
+    padding-left: 5px;
+}
+
+.card_footer {
+    margin-top:30px;
+}
+
+  .card_image {
+    width:100px;
+    height:100px;
+  }
+  
+  .title {
+    color: grey;
+    font-size: 18px;
+  }
+  
+  button {
+    border: none;
+    outline: 0;
+    display: inline-block;
+    padding: 8px;
+    color: white;
+    background-color: #fffdfd;
+    text-align: center;
+    cursor: pointer;
+    width: 100%;
+    font-size: 18px;
+  }
+  
+  a {
+    text-decoration: none;
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+  }
+  
+  button:hover, a:hover {
+    opacity: 0.7;
+  }
