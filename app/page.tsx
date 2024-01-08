@@ -15,7 +15,7 @@ function App() {
     const [data, setData] = useState<NFTData[]>([]);
 
     useEffect(() => {
-        let socket;
+        let socket: WebSocket;
         let reconnectInterval = 5000; // Reconnect every 5 seconds
 
         function connectWebSocket() {
