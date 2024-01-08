@@ -1,30 +1,36 @@
 import React, { useEffect, useState } from 'react';
-
-const FlyingCoinCards = ({ data }) => {
+interface NFTData {
+    name: string;
+    symbol: string;
+    image: string;
+    description: string;
+    CA: string;
+}
+const FlyingCoinCards = ({ data }: any) => {
     const [animatedItems, setAnimatedItems] = useState(new Set());
 
     useEffect(() => {
         // Filter out items that are already in the animatedItems set
-        const newItems = data.filter(item => !animatedItems.has(item.CA));
+        const newItems = data.filter((item: { CA: unknown; }) => !animatedItems.has(item.CA));
 
         if (newItems.length > 0) {
             // Add new items to the animatedItems set
             const updatedAnimatedItems = new Set(animatedItems);
-            newItems.forEach(item => updatedAnimatedItems.add(item.CA));
+            newItems.forEach((item: { CA: unknown; }) => updatedAnimatedItems.add(item.CA));
             setAnimatedItems(updatedAnimatedItems);
 
             // Set a timeout to clear the animatedItems set after the animation duration
             const timer = setTimeout(() => {
                 setAnimatedItems(current => {
                     const newSet = new Set(current);
-                    newItems.forEach(item => newSet.delete(item.CA));
+                    newItems.forEach((item: { CA: unknown; }) => newSet.delete(item.CA));
                     return newSet;
                 });
             }, 1000); // Animation duration should match CSS
 
             return () => clearTimeout(timer);
         }
-    }, [data]);
+    }, [animatedItems, data]);
 
     return (
         <div>
@@ -33,7 +39,7 @@ const FlyingCoinCards = ({ data }) => {
                 <thead>
                 </thead>
                 <tbody>
-                    {data.map((item, index) => (
+                    {data.map((item: NFTData, index: React.Key | null | undefined) => (
                         <tr key={index}>
                             <td>
                                 <div className={`card ${animatedItems.has(item.CA) ? 'fade-in' : ''}`}>
