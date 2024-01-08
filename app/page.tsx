@@ -15,7 +15,7 @@ function App() {
     const [data, setData] = useState<NFTData[]>([]);
 
     useEffect(() => {
-        const socket = new WebSocket('wss://flyingcoin.xyz:8080');
+        const socket = new WebSocket('wss://flyingcoin.xyz/ws');
 
         socket.onmessage = (event) => {
             const newData = JSON.parse(event.data);
