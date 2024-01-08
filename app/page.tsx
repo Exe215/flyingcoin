@@ -15,19 +15,38 @@ function App() {
     const [data, setData] = useState<NFTData[]>([]);
 
     useEffect(() => {
-        const socket = new WebSocket('wss://flyingcoin.xyz/ws');
+        let socket;
+        let reconnectInterval = 5000; // Reconnect every 5 seconds
 
-        socket.onmessage = (event) => {
-            const newData = JSON.parse(event.data);
-            setData(prevData => [newData, ...prevData]);
-        };
+        function connectWebSocket() {
+            socket = new WebSocket('wss://flyingcoin.xyz/ws');
 
-        socket.onclose = () => {
-            console.log('WebSocket Disconnected');
-        };
+            socket.onmessage = (event) => {
+                const newData = JSON.parse(event.data);
+                setData(prevData => [newData, ...prevData]);
+            };
+
+            socket.onopen = () => {
+                console.log('WebSocket Connected');
+            };
+
+            socket.onclose = (e) => {
+                console.log('WebSocket Disconnected', e.reason);
+                setTimeout(connectWebSocket, reconnectInterval);
+            };
+
+            socket.onerror = (error) => {
+                console.error('WebSocket Error', error);
+                socket.close(); // Ensure the close handler is triggered
+            };
+        }
+
+        connectWebSocket();
 
         return () => {
-            socket.close();
+            if (socket) {
+                socket.close();
+            }
         };
     }, []);
 
