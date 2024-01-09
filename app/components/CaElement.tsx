@@ -32,7 +32,7 @@ const CaElement: React.FC<CaElementProps> = ({ ca }) => {
     };
 
     return (
-        <div onClick={handleClick} style={{ cursor: 'pointer', fontSize: '10px' }}>
+        <div onClick={handleClick} style={{ cursor: 'pointer', fontSize: '11px' }}>
             {ca}
         </div>
     );

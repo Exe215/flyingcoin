@@ -9,6 +9,17 @@ interface NFTData {
     tg: string | null;
     website: string | null;
     x: string | null;
+    LPToken: string;
+    PoolID: string;
+    LPSize: string;
+}
+
+function truncateStringToFourChars(str: string) {
+    if (str.length > 4) {
+        return str.substring(0, 5) + "..." + str.substring(str.length, str.length - 5);
+    } else {
+        return str;
+    }
 }
 
 const FlyingCoinCards = ({ data }: any) => {
@@ -71,10 +82,34 @@ const FlyingCoinCards = ({ data }: any) => {
                                             <h2 className="card_name">
                                                 {item.name}
                                             </h2>
-                                            <p className="card_occupation" style={{wordBreak: "break-all"}}>
+                                            <p
+                                                className="card_occupation"
+                                                style={{
+                                                    wordBreak: "break-all",
+                                                }}
+                                            >
                                                 {item.description}
                                             </p>
-                                            <CaElement ca={item.CA}/>
+                                            <CaElement ca={item.CA} />
+                                            <div className="other_information">
+                                                <div>Liq: {item.LPSize} ◎</div>
+                                                <div>
+                                                    Pool ID:
+                                                    <a className="id_link" href={"https://solscan.io/account/" + item.PoolID} target="_blank">
+                                                        {truncateStringToFourChars(
+                                                            item.PoolID
+                                                        )}
+                                                    </a>
+                                                </div>
+                                                <div>
+                                                    LP Token:{" "}
+                                                    <a className="id_link" href={"https://solscan.io/account/" + item.LPToken} target="_blank">
+                                                        {truncateStringToFourChars(
+                                                            item.LPToken
+                                                        )}
+                                                    </a>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <div className="card_footer">

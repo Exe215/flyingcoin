@@ -97,7 +97,7 @@ function extractAccountData(transactionData: VersionedTransactionResponse, accou
         owner: accountData.owner,
         tokenAmount: accountData.uiTokenAmount,
         LPTokenID: LPTokenID?.mint,
-        PoolID: PoolID.toString(),
+        PoolID: PoolID,
         LPSize: LPSize?.uiTokenAmount.uiAmountString
     };
 }
