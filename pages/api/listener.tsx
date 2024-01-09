@@ -1,7 +1,11 @@
-import { VersionedTransactionResponse, Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { VersionedTransactionResponse, Connection, PublicKey, clusterApiUrl, PublicKeyInitData } from '@solana/web3.js';
 import { Metaplex} from '@metaplex-foundation/js';
 import { Metadata } from '@metaplex-foundation/mpl-token-metadata';
 import WebSocket from 'ws';
+import {
+    PoolInfoLayout,
+    SqrtPriceMath,
+  } from '@raydium-io/raydium-sdk';
 
 
 
@@ -33,6 +37,41 @@ function getCache(){
     return cache;
 }
 
+const getConnection = () => {
+    return new Connection(clusterApiUrl('mainnet-beta'));
+};
+
+
+
+async function getClmmPoolInfo(id: PublicKey, connection: Connection, maxRetries = 3) {
+    console.log(id.toString());
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const accountInfo = await connection.getAccountInfo(id);
+
+            if (accountInfo === null) {
+                throw new Error('Account info not available');
+            }
+
+            const poolData = PoolInfoLayout.decode(accountInfo.data);
+
+            console.log('current Liquidity -> ', SqrtPriceMath.sqrtPriceX64ToPrice(poolData.liquidity, poolData.mintDecimalsA, poolData.mintDecimalsB));
+            console.log(poolData);
+            return; // Exit the function after successful fetch
+        } catch (error) {
+            console.log(`Attempt ${attempt + 1} failed:`);
+            if (attempt < maxRetries - 1) {
+                // Wait for a while before retrying
+                await new Promise(resolve => setTimeout(resolve, 10000)); // 2 seconds delay
+            } else {
+                throw error; // Throw error after all retries are exhausted
+            }
+        }
+    }
+}
+  
+
 function extractAccountData(transactionData: VersionedTransactionResponse, accountIndex: number) {
     // Check if meta is available and has postTokenBalances
     if (!transactionData.meta || !transactionData.meta.postTokenBalances) {
@@ -49,6 +88,7 @@ function extractAccountData(transactionData: VersionedTransactionResponse, accou
     }
 
     const LPTokenID = transactionData.meta.postTokenBalances.find(account => account.accountIndex === 10);
+    const LPSize = transactionData.meta.postTokenBalances.find(account => account.accountIndex === 6);
     const PoolID = transactionData.transaction.message.staticAccountKeys[2];
 
     // Returning the relevant data for the account
@@ -57,7 +97,8 @@ function extractAccountData(transactionData: VersionedTransactionResponse, accou
         owner: accountData.owner,
         tokenAmount: accountData.uiTokenAmount,
         LPTokenID: LPTokenID?.mint,
-        PoolID: PoolID.toString()
+        PoolID: PoolID,
+        LPSize: LPSize?.uiTokenAmount.uiAmountString
     };
 }
 
@@ -131,7 +172,7 @@ function extractSocialsInDescription(desc: string): {x: string | null, tg: strin
 
 
 async function main() {
-    const connection = new Connection(clusterApiUrl('mainnet-beta'));
+    const connection = getConnection();
     const programId = new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8');
     const programIdBurn = new PublicKey('5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1');
     const metaplex = Metaplex.make(connection);
@@ -152,11 +193,15 @@ async function main() {
 
                 const nft = await metaplex.nfts().findByMint({ mintAddress: new PublicKey(accountData.mint) });
                 const socials = extractSocialsInDescription(nft.json?.description || '');
+                //const PoolData = getClmmPoolInfo(accountData.PoolID, connection);
                 const data = nft.json;
                 const enrichedData = {
                     ...data,
                     ...socials,
                     CA: accountData.mint,
+                    LPToken: accountData.LPTokenID,
+                    PoolID: accountData.PoolID,
+                    LPSize: accountData.LPSize
                 };
                 if(data){
                 const datasend = JSON.stringify(enrichedData);
