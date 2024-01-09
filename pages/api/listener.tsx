@@ -48,11 +48,16 @@ function extractAccountData(transactionData: VersionedTransactionResponse, accou
         return null;
     }
 
+    const LPTokenID = transactionData.meta.postTokenBalances.find(account => account.accountIndex === 10);
+    const PoolID = transactionData.transaction.message.staticAccountKeys[2];
+
     // Returning the relevant data for the account
     return {
         mint: accountData.mint,
         owner: accountData.owner,
-        tokenAmount: accountData.uiTokenAmount
+        tokenAmount: accountData.uiTokenAmount,
+        LPTokenID: LPTokenID?.mint,
+        PoolID: PoolID.toString()
     };
 }
 
@@ -108,7 +113,7 @@ wss.on('connection', ws => {
 async function main() {
     const connection = new Connection(clusterApiUrl('mainnet-beta'));
     const programId = new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8');
-    const programIdBurn = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+    const programIdBurn = new PublicKey('5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1');
     const metaplex = Metaplex.make(connection);
 
     connection.onLogs(programId, async (logs, context) => {
@@ -122,6 +127,7 @@ async function main() {
 
                 const accountIndex = 9;
                 const accountData = extractAccountData(transactionDetails, accountIndex);
+                console.log(accountData);
                 if (!accountData) throw new Error("Account data not found");
 
                 const nft = await metaplex.nfts().findByMint({ mintAddress: new PublicKey(accountData.mint) });
