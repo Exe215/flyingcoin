@@ -19,7 +19,7 @@ function App() {
         let reconnectInterval = 5000; // Reconnect every 5 seconds
 
         function connectWebSocket() {
-            socket = new WebSocket('ws://localhost:8080');
+            socket = new WebSocket('wss://flyingcoin.xyz/ws');
 
             socket.onmessage = (event) => {
                 const newData = JSON.parse(event.data);
