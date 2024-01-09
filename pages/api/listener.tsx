@@ -103,6 +103,26 @@ wss.on('connection', ws => {
     });
 });
 
+function extractSocialsInDescription(desc: string): {x: string | null, tg: string | null, website:string | null} {
+    const twitterLinkRegex = /https?:\/\/twitter\.com\/[^\s]+/i;
+    const telegramLinkRegex = /https?:\/\/t\.me\/[^\s]+/i;
+    const websiteLinkRegex = /https?:\/\/(?![^\s]*(x|twitter|t\.me))[^\s]+/gi;
+
+    const twitterLinkMatch = desc.match(twitterLinkRegex);
+    const twitterLink = twitterLinkMatch ? twitterLinkMatch[0] : null;
+
+    const telegramLinkMatch = desc.match(telegramLinkRegex);
+    const telegramLink = telegramLinkMatch ? telegramLinkMatch[0] : null;
+
+    let websiteLinkMatch = desc.match(websiteLinkRegex);
+    let websiteLink = websiteLinkMatch ? websiteLinkMatch[0] : null;
+
+    return {
+        x: twitterLink,
+        tg: telegramLink,
+        website: websiteLink
+    };
+}
 
 
 async function main() {
@@ -125,9 +145,11 @@ async function main() {
                 if (!accountData) throw new Error("Account data not found");
 
                 const nft = await metaplex.nfts().findByMint({ mintAddress: new PublicKey(accountData.mint) });
+                const socials = extractSocialsInDescription(nft.json?.description || '');
                 const data = nft.json;
                 const enrichedData = {
                     ...data,
+                    ...socials,
                     CA: accountData.mint,
                 };
                 if(data){

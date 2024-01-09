@@ -55,6 +55,10 @@ body {
     margin-top:30px;
 }
 
+.card_footer_social {
+    margin-top:10px;
+}
+
   .card_image {
     width:100px;
     height:100px;
