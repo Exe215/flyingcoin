@@ -150,7 +150,7 @@ wss.on('connection', ws => {
 });
 
 function extractSocialsInDescription(desc: string): {x: string | null, tg: string | null, website:string | null} {
-    const twitterLinkRegex = /https?:\/\/twitter\.com\/[^\s]+/i;
+    const twitterLinkRegex = /https?:\/\/(x|twitter)\.com\/[^\s]+/i;
     const telegramLinkRegex = /https?:\/\/t\.me\/[^\s]+/i;
     const websiteLinkRegex = /https?:\/\/(?![^\s]*(x|twitter|t\.me))[^\s]+/gi;
 

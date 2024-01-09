@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import CaElement from "./CaElement";
 interface NFTData {
     name: string;
     symbol: string;
@@ -9,6 +10,7 @@ interface NFTData {
     website: string | null;
     x: string | null;
 }
+
 const FlyingCoinCards = ({ data }: any) => {
     const [animatedItems, setAnimatedItems] = useState(new Set());
 
@@ -69,13 +71,10 @@ const FlyingCoinCards = ({ data }: any) => {
                                             <h2 className="card_name">
                                                 {item.name}
                                             </h2>
-                                            <p className="card_occupation">
+                                            <p className="card_occupation" style={{wordBreak: "break-all"}}>
                                                 {item.description}
                                             </p>
-                                            <a href="#" className="card_button">
-                                                <i className="bx bx-envelope"></i>
-                                                {item.CA}
-                                            </a>
+                                            <CaElement ca={item.CA}/>
                                         </div>
 
                                         <div className="card_footer">
