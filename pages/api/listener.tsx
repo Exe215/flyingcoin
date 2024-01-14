@@ -1,14 +1,13 @@
-import { VersionedTransactionResponse, Connection, PublicKey, clusterApiUrl, PublicKeyInitData } from '@solana/web3.js';
-import { Metaplex} from '@metaplex-foundation/js';
-import { Metadata } from '@metaplex-foundation/mpl-token-metadata';
+import { VersionedTransactionResponse, Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { Metaplex } from '@metaplex-foundation/js';
 import WebSocket from 'ws';
-import {
-    PoolInfoLayout,
-    SqrtPriceMath,
-  } from '@raydium-io/raydium-sdk';
+import { PoolInfoLayout, SqrtPriceMath } from '@raydium-io/raydium-sdk';
+import axios from 'axios';
 
 
-
+interface ExtendedWebSocket extends WebSocket {
+    isAlive: boolean;
+}
 
 interface TransactionData {
     meta?: {
@@ -22,26 +21,77 @@ interface TransactionData {
     };
 }
 
+interface Pair {
+    chainId: string;
+    dexId: string;
+    url: string;
+    pairAddress: string;
+    baseToken: {
+      address: string;
+      name: string;
+      symbol: string;
+    };
+    quoteToken: {
+      symbol: string;
+    };
+    priceNative: string;
+    priceUsd?: string;
+    txns: {
+      m5: {
+        buys: number;
+        sells: number;
+      };
+      h1: {
+        buys: number;
+        sells: number;
+      };
+      h6: {
+        buys: number;
+        sells: number;
+      };
+      h24: {
+        buys: number;
+        sells: number;
+      };
+    };
+    volume: {
+      m5: number;
+      h1: number;
+      h6: number;
+      h24: number;
+    };
+    priceChange: {
+      m5: number;
+      h1: number;
+      h6: number;
+      h24: number;
+    };
+    liquidity?: {
+      usd?: number;
+      base: number;
+      quote: number;
+    };
+    fdv?: number;
+    pairCreatedAt?: number;
+  }
 
 const cacheSize = 50;
 const cache: any[] = [];
 
 function addToCache(data: any) {
-    if (cache.length >= cacheSize){
+    if (cache.length >= cacheSize) {
         cache.shift();
     }
     cache.push(data);
 }
 
-function getCache(){
+function getCache() {
     return cache;
 }
 
 const getConnection = () => {
     return new Connection(clusterApiUrl('mainnet-beta'));
 };
-
-
 
 async function getClmmPoolInfo(id: PublicKey, connection: Connection, maxRetries = 3) {
     console.log(id.toString());
@@ -60,28 +110,52 @@ async function getClmmPoolInfo(id: PublicKey, connection: Connection, maxRetries
             console.log(poolData);
             return; // Exit the function after successful fetch
         } catch (error) {
-            console.log(`Attempt ${attempt + 1} failed:`);
+            console.log(`Attempt ${attempt + 1} failed:`, error);
             if (attempt < maxRetries - 1) {
-                // Wait for a while before retrying
-                await new Promise(resolve => setTimeout(resolve, 10000)); // 2 seconds delay
+                await new Promise(resolve => setTimeout(resolve, 10000));
             } else {
-                throw error; // Throw error after all retries are exhausted
+                throw error;
             }
         }
     }
 }
-  
+
+async function getBirdeyeInfo(Contract: string) {
+    const url = `https://api.dexscreener.com/latest/dex/tokens/${Contract}`;
+    console.log(url);
+
+    let attempts = 0;
+    const maxAttempts = 5;
+    const retryDelay = 2000; // Delay in milliseconds (2000 ms = 2 seconds)
+
+    while (attempts < maxAttempts) {
+        try {
+            const response = await axios.get(url);
+            if (response.data.pairs) {
+                return response.data; // Return data if successful
+            }
+        } catch (error) {
+            console.error(`Attempt ${attempts + 1}: Error fetching data from DexScreener API`, error);
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+            console.log(`Retrying... Attempt ${attempts + 1}`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+        }
+    }
+
+    console.error("Failed to fetch data after maximum attempts");
+    return null; // Return null after all attempts fail
+}
 
 function extractAccountData(transactionData: VersionedTransactionResponse, accountIndex: number) {
-    // Check if meta is available and has postTokenBalances
     if (!transactionData.meta || !transactionData.meta.postTokenBalances) {
         console.error("Post token balances data is not available");
         return null;
     }
 
-    // Find the account data for the specified index
     const accountData = transactionData.meta.postTokenBalances.find(account => account.accountIndex === accountIndex);
-    
     if (!accountData) {
         console.error(`No data found for account index ${accountIndex}`);
         return null;
@@ -91,7 +165,6 @@ function extractAccountData(transactionData: VersionedTransactionResponse, accou
     const LPSize = transactionData.meta.postTokenBalances.find(account => account.accountIndex === 6);
     const PoolID = transactionData.transaction.message.staticAccountKeys[2];
 
-    // Returning the relevant data for the account
     return {
         mint: accountData.mint,
         owner: accountData.owner,
@@ -103,16 +176,12 @@ function extractAccountData(transactionData: VersionedTransactionResponse, accou
 }
 
 function containsOnlySpecificInstructions(logs: any[], instructions: any[]) {
-    // Check if all logs are in the list of specific instructions
-    return logs.every((log: string) => instructions.includes(log.trim())) && 
-           // And all specific instructions are in the logs
+    return logs.every((log: string) => instructions.includes(log.trim())) &&
            instructions.every((instruction: any) => logs.some((log: string | any[]) => log.includes(instruction)));
 }
 
-
-async function fetchTransactionWithRetry(connection: Connection, signature: string, maxRetries: number = 1) {
+async function fetchTransactionWithRetry(connection: Connection, signature: string, maxRetries: number = 3) {
     let delayMs = 2000;
-
     for (let i = 0; i < maxRetries; i++) {
         try {
             await connection.confirmTransaction(signature, 'confirmed');
@@ -126,15 +195,15 @@ async function fetchTransactionWithRetry(connection: Connection, signature: stri
             }
         } catch (error) {
             console.error(`Error on attempt ${i + 1}:`, error);
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
         }
-
-        await new Promise(resolve => setTimeout(resolve, delayMs));
     }
-
     throw new Error(`Transaction details for ${signature} could not be fetched after ${maxRetries} retries`);
 }
 
-const wss = new WebSocket.Server({ port: 8080 , maxPayload: 10 * 1024 * 1024 });
+const wss = new WebSocket.Server({ port: 8080, maxPayload: 10 * 1024 * 1024 });
 console.log("WebSocket server started on port 8080");
 
 wss.on('connection', ws => {
@@ -147,9 +216,42 @@ wss.on('connection', ws => {
     ws.on('close', () => {
         console.log('Client disconnected');
     });
+
+    ws.on('error', error => {
+        console.error('WebSocket error:', error);
+    });
 });
 
-function extractSocialsInDescription(desc: string): {x: string | null, tg: string | null, website:string | null} {
+// Implement WebSocket keep-alive mechanism
+function heartbeat(this: any) {
+    this.isAlive = true;
+}
+
+wss.on('connection', (ws) => {
+    const extWs = ws as ExtendedWebSocket;
+    extWs.isAlive = true;
+
+    extWs.on('pong', () => {
+        extWs.isAlive = true;
+    });
+});
+
+const interval = setInterval(function ping() {
+    wss.clients.forEach((ws) => {
+        const extWs = ws as ExtendedWebSocket;
+
+        if (extWs.isAlive === false) return ws.terminate();
+
+        extWs.isAlive = false;
+        ws.ping();
+    });
+}, 30000);
+
+wss.on('close', function close() {
+    clearInterval(interval);
+});
+
+function extractSocialsInDescription(desc: string): { x: string | null, tg: string | null, website: string | null } {
     const twitterLinkRegex = /https?:\/\/(x|twitter)\.com\/[^\s]+/i;
     const telegramLinkRegex = /https?:\/\/t\.me\/[^\s]+/i;
     const websiteLinkRegex = /https?:\/\/(?![^\s]*(x|twitter|t\.me))[^\s]+/gi;
@@ -170,7 +272,6 @@ function extractSocialsInDescription(desc: string): {x: string | null, tg: strin
     };
 }
 
-
 async function main() {
     const connection = getConnection();
     const programId = new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8');
@@ -188,10 +289,11 @@ async function main() {
 
                 const accountIndex = 9;
                 const accountData = extractAccountData(transactionDetails, accountIndex);
-                console.log(accountData);
                 if (!accountData) throw new Error("Account data not found");
 
                 const nft = await metaplex.nfts().findByMint({ mintAddress: new PublicKey(accountData.mint) });
+                console.log(accountData.mint)
+                //const birdeye = await getBirdeyeInfo(accountData.mint);
                 const socials = extractSocialsInDescription(nft.json?.description || '');
                 //const PoolData = getClmmPoolInfo(accountData.PoolID, connection);
                 const data = nft.json;
@@ -221,49 +323,19 @@ async function main() {
         }
     }, "confirmed");
 
-    
-    connection.onLogs(programIdBurn, async (logs, context) => {
-        const instructionsOfInterest = ["Program log: Instruction: Burn", "Program log: Instruction: CloseAccount"];
-        const isBurnEvent = containsOnlySpecificInstructions(logs.logs, instructionsOfInterest);
-
-        if (isBurnEvent) {
-            try {
-                console.log("Found Burn Event", logs.signature);
-                console.log(logs);
-                const transactionDetails = await fetchTransactionWithRetry(connection, logs.signature);
-                if (!transactionDetails) throw new Error("Transaction details not found");
-                console.log(transactionDetails);
-
-                const accountIndex = 9;
-                const accountData = extractAccountData(transactionDetails, accountIndex);
-                if (!accountData) throw new Error("Account data not found");
-
-                const nft = await metaplex.nfts().findByMint({ mintAddress: new PublicKey(accountData.mint) });
-                const data = nft.json
-                const enrichedData = {
-                    ...data,
-                    CA: accountData.mint,
-                };
-                const datasend = JSON.stringify(enrichedData);
-                addToCache(datasend);
-                console.log(enrichedData);
-
-                // Broadcasting the data to all connected clients
-                wss.clients.forEach(client => {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(datasend);
-                    }
-                });
-            } catch (error) {
-                console.error('Error fetching transaction details:', error);
-            }
-        }
-    }, "confirmed");
-
-
-    console.log("Listening for 'create pool' events...");
+    console.log("Listening for 'create pool' and 'burn' events...");
 }
 
 main().catch(err => {
-    console.error('Error:', err);
+    console.error('Error in main function:', err);
 });
+
+// Global error handlers
+process.on('uncaughtException', error => {
+    console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', error => {
+    console.error('Unhandled Rejection:', error);
+});
+
