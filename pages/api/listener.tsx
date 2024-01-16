@@ -252,7 +252,7 @@ wss.on('close', function close() {
 });
 
 function extractSocialsInDescription(desc: string): { x: string | null, tg: string | null, website: string | null } {
-    const twitterLinkRegex = /https?:\/\/)?(x|twitter)\.com\/[^\s]+/i;
+    const twitterLinkRegex = /(https?:\/\/)?(x|twitter)\.com\/[^\s]+/i;
     const telegramLinkRegex = /(https?:\/\/)?t\.me\/[^\s]+/i
     const websiteLinkRegex = /(https?:\/\/)?(?!t\.me|(twitter|x)\.com)[\w-]+(\.[\w-]+)+\.[a-zA-Z]{2,}/
 
@@ -279,7 +279,7 @@ async function main() {
     const programIdBurn = new PublicKey('5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1');
     const metaplex = Metaplex.make(connection);
 
-    connection.onLogs(programId, async (logs, context) => {
+    connection.onLogs(programId, async (logs, _context) => {
         const isCreatePoolEvent = logs.logs.some(log => log.includes('Program log: Instruction: InitializeMint'));
 
         if (isCreatePoolEvent) {
